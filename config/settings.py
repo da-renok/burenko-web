@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,6 +41,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "studio",
+    "users",
+    "rest_framework_simplejwt",
 ]
 
 MIDDLEWARE = [
@@ -135,12 +138,24 @@ APPEND_SLASH = False
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "studio.exceptions.custom_exception_handler",
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+    ),
 }
 
-# CORS: дозволені лише конкретні адреси фронтенду (не "*")
+
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://localhost:63342",
-    "http://127.0.0.1:63342"
+    "http://127.0.0.1:63342",
 ]
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}

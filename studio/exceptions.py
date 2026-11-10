@@ -11,7 +11,6 @@ ERROR_CODES = {
 
 
 class ConflictError(APIException):
-
     status_code = status.HTTP_409_CONFLICT
     default_detail = "Конфлікт із поточним станом даних."
     default_code = "conflict"
@@ -30,5 +29,3 @@ def custom_exception_handler(exc, context):
         error["message"] = str(exc.detail)
     response.data = {"error": error}
     return response
-
-

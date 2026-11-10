@@ -12,7 +12,7 @@ TattooAI (ТатуАЙ) --- це інноваційна вебплатформа
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
+.venv\Scripts\activate          
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
@@ -25,6 +25,29 @@ python manage.py runserver
 ## Архітектура REST API
 
 Дані передаються у форматі `JSON`. Архітектура побудована за принципами REST, де кожен ендпоінт відповідає за певний ресурс. Версія API вказана в URL (`/api/v1/`). Для оновлення використовується `PUT` (повна заміна об'єкта), `DELETE` повертає видалений об'єкт.
+### 0. Авторизація та Реєстрація (Auth)
+
+Доступ до створення, редагування та видалення ескізів і майстрів мають лише авторизовані користувачі. Для цих запитів (`POST`, `PUT`, `DELETE`) необхідно передавати Access-токен у заголовку:
+`Authorization: Bearer <access_token>`
+
+При відсутності токена сервер повертає `401 Unauthorized`.
+
+#### Реєстрація
+* Request Method: `POST`
+* Endpoint: `/api/v1/auth/register/`
+* Request Body: `username`, `email`, `first_name`, `last_name`, `password`, `password_confirmation`
+
+#### Логін (Отримання токенів)
+* Request Method: `POST`
+* Endpoint: `/api/v1/auth/login/`
+* Request Body: `username`, `password`
+* Response Body: `{ "access": "...", "refresh": "..." }`
+
+#### Оновлення токена (Refresh)
+* Request Method: `POST`
+* Endpoint: `/api/v1/auth/refresh/`
+* Request Body: `{ "refresh": "..." }`
+* Response Body: `{ "access": "..." }`
 
 ### 1. Каталог ескізів (Designs)
 
