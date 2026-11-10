@@ -1,115 +1,236 @@
-# web-programming-2026-template
+# TattooAI Studio
 
-A reusable Django project with no bundled application, SQLite, and Django's
-standard admin, authentication, sessions, messages, and staticfiles support.
+## Опис проєкту (Бізнес-логіка)
 
-## Local setup
+TattooAI (ТатуАЙ) --- це інноваційна вебплатформа для студії кастомного татуювання. Головна мета сайту --- спростити комунікацію між клієнтом та майстром, а також допомогти клієнтам краще візуалізувати свої ідеї.
 
-Requires the latest patch release of Python 3.12, 3.13, or 3.14. Run these commands from the project directory containing
-`manage.py`.
+На платформі клієнти можуть переглядати портфоліо майстрів та каталог готових ескізів студії. Основна унікальна функція сайту --- це інтеграція зі штучним інтелектом. Користувач може описати бажане татуювання словами (наприклад, "щільний чорно-білий ескіз морди собаки, стиль blackwork"), а ШІ згенерує візуальний концепт. Усі згенеровані концепти та вподобані готові ескізи клієнт може зберігати у своєму особистому кабінеті, щоб згодом прикріпити їх до заявки під час бронювання сеансу у обраного майстра.
 
-1. Create and activate a virtual environment:
+> У поточній роботі реалізовано CRUD для основних ресурсів: ескізи (`designs`) та майстри (`masters`).
 
-   ```bash
-   python -m venv .venv
-   
-   # for linux/macos
-   source .venv/bin/activate
-   # for Windows:
-   .venv\Scripts\activate
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   python -m pip install -r requirements-dev.txt
-   ```
-
-
-3. Apply migrations to create the local SQLite database:
-
-   ```bash
-   python manage.py migrate
-   ```
-
-4. Start the development server:
-
-   ```bash
-   python manage.py runserver
-   ```
-
-## Endpoints
-
-With the server running at `http://127.0.0.1:8000`:
-
-| URL | Behavior |
-| --- | --- |
-| http://127.0.0.1:8000/ | No application homepage; may show Django's development welcome page while `DEBUG = True` |
-| http://127.0.0.1:8000/admin/ | Django admin, available after applying migrations |
-
-With `DEBUG = False`, unmatched URLs such as `/` return HTTP 404.
-
-To create an account for admin login, run this after applying migrations:
+## Як запустити проєкт
 
 ```bash
-python manage.py createsuperuser
+python -m venv .venv
+.venv\Scripts\activate          
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
-## Add your first application
+Сервер буде доступний за адресою **http://127.0.0.1:8000**.
 
-1. Create an app from the directory containing `manage.py` (replace `myapp`
-   with your application name):
+Колекція Postman: `postman/TattooAI.postman_collection.json` (базова адреса винесена у змінну `{{base_url}}` = `http://127.0.0.1:8000`).
 
-   ```bash
-   python manage.py startapp myapp
-   ```
+## Архітектура REST API
 
-2. Add its generated configuration class, `myapp.apps.MyappConfig`, to
-   `INSTALLED_APPS` in `config/settings.py`.
-3. Define your views and create `myapp/urls.py` with their URL patterns.
-4. Register that URLconf in `config/urls.py` using `path()` and `include()`,
-   choosing a URL prefix for the app and retaining the admin route.
+Дані передаються у форматі `JSON`. Архітектура побудована за принципами REST, де кожен ендпоінт відповідає за певний ресурс. Версія API вказана в URL (`/api/v1/`). Для оновлення використовується `PUT` (повна заміна об'єкта), `DELETE` повертає видалений об'єкт.
+### 0. Авторизація та Реєстрація (Auth)
 
-See the official Django 6.1 tutorial for
-[views and URL registration](https://docs.djangoproject.com/en/6.1/intro/tutorial01/)
-and [app registration and models](https://docs.djangoproject.com/en/6.1/intro/tutorial02/).
+Доступ до створення, редагування та видалення ескізів і майстрів мають лише авторизовані користувачі. Для цих запитів (`POST`, `PUT`, `DELETE`) необхідно передавати Access-токен у заголовку:
+`Authorization: Bearer <access_token>`
 
-## Git attributes
+При відсутності токена сервер повертає `401 Unauthorized`.
 
-Git detects text files automatically and normalizes them to LF. Checkouts use
-LF on Linux and Windows, while `.bat` and `.cmd` files use CRLF. Binary files
-are auto-detected and left unchanged, helping avoid newline-only diffs.
+#### Реєстрація
+* Request Method: `POST`
+* Endpoint: `/api/v1/auth/register/`
+* Request Body: `username`, `email`, `first_name`, `last_name`, `password`, `password_confirmation`
 
+#### Логін (Отримання токенів)
+* Request Method: `POST`
+* Endpoint: `/api/v1/auth/login/`
+* Request Body: `username`, `password`
+* Response Body: `{ "access": "...", "refresh": "..." }`
 
-## Code style and submission verification
+#### Оновлення токена (Refresh)
+* Request Method: `POST`
+* Endpoint: `/api/v1/auth/refresh/`
+* Request Body: `{ "refresh": "..." }`
+* Response Body: `{ "access": "..." }`
 
-All submissions are required to adhere to PEP-8, Django best practices, and standard HTML/CSS/JS formatting. A deterministic cross-platform utility is provided to help you check and format your code.
+### 1. Каталог ескізів (Designs)
 
-### 1. Verification (Check Mode)
-Before submitting, verify that all files adhere to the required standards:
+#### Список ескізів
 
-```bash
-python check_submission.py
+**Опис:** Отримання переліку готових ескізів студії з можливістю фільтрації за стилем.
+
+* Request Method: `GET`
+* Endpoint: `/api/v1/designs`
+* Request Body: `?style=blackwork` (Query-параметр, необов'язковий)
+* Response Status: `200 OK`
+* Response Body:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Орнаментальна мандала",
+    "style": "blackwork",
+    "price": 1500,
+    "image_url": "https://example.com/images/mandala.jpg",
+    "master": 1
+  }
+]
 ```
 
-If all checks pass, you are ready to submit! If any checks fail, review the error output or run the auto-formatter below.
+> **Зміна:** у ескіза з'явилося поле `master` (id майстра). Воно потрібне, щоб пов'язати ескізи з майстрами та реалізувати обмеження на видалення майстра.
 
-### 2. Auto-Formatting
-To automatically format Python files, fix safe PEP-8 rules, format Django HTML templates, and format CSS/JS static files:
+#### Окремий ескіз
 
-```bash
-python check_submission.py --format
+**Опис:** Отримання ескіза за його id.
+
+* Request Method: `GET`
+* Endpoint: `/api/v1/designs/{id}`
+* Response Status: `200 OK`
+* Response Body:
+
+```json
+{
+  "id": 1,
+  "title": "Орнаментальна мандала",
+  "style": "blackwork",
+  "price": 1500,
+  "image_url": "https://example.com/images/mandala.jpg",
+  "master": 1
+}
 ```
 
-### 3. PyCharm Integration
-If you use PyCharm:
-- **One-Click Run:** In the top-right toolbar run configurations dropdown, select **"Verify Submission"** or **"Format Project"** and click the green **Play** button.
+#### Створення ескіза
 
-## Development only
+**Опис:** Додавання нового ескіза до каталогу.
 
-The included settings use `DEBUG = True`, a development secret key, and a local
-SQLite database. The default mailer uses the console backend: email is printed
-to the process's console instead of being delivered.
+* Request Method: `POST`
+* Endpoint: `/api/v1/designs`
+* Request Body:
 
-This configuration and Django's development server are not suitable for
-production deployment.
+```json
+{
+  "title": "Орнаментальна мандала",
+  "style": "blackwork",
+  "price": 1500,
+  "image_url": "https://example.com/images/mandala.jpg",
+  "master": 1
+}
+```
+
+* Response Status: `201 Created`
+* Response Body: створений ескіз (як у прикладі вище, з полем `id`).
+
+Поля: `title` --- рядок; `style` --- рядок; `price` --- ціле число більше 0; `image_url` --- коректний URL; `master` --- id існуючого майстра.
+
+#### Редагування ескіза
+
+**Опис:** Повне оновлення даних ескіза.
+
+* Request Method: `PUT`
+* Endpoint: `/api/v1/designs/{id}`
+* Request Body: ті самі поля, що й при створенні.
+* Response Status: `200 OK`
+* Response Body: оновлений ескіз.
+
+#### Видалення ескіза
+
+**Опис:** Видалення ескіза з каталогу.
+
+* Request Method: `DELETE`
+* Endpoint: `/api/v1/designs/{id}`
+* Response Status: `200 OK`
+* Response Body: видалений ескіз.
+
+### 2. Майстри (Masters)
+
+#### Список майстрів
+
+* Request Method: `GET`
+* Endpoint: `/api/v1/masters`
+* Response Status: `200 OK`
+* Response Body:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Олена Корж",
+    "specialization": "blackwork"
+  }
+]
+```
+
+#### Окремий майстер
+
+* Request Method: `GET`
+* Endpoint: `/api/v1/masters/{id}`
+* Response Status: `200 OK`
+* Response Body: об'єкт майстра (як у прикладі вище).
+
+#### Створення майстра
+
+* Request Method: `POST`
+* Endpoint: `/api/v1/masters`
+* Request Body:
+
+```json
+{
+  "name": "Олена Корж",
+  "specialization": "blackwork"
+}
+```
+
+* Response Status: `201 Created`
+* Response Body: створений майстер (з полем `id`).
+
+Поля: `name` --- обов'язковий рядок; `specialization` --- необов'язковий рядок.
+
+#### Редагування майстра
+
+* Request Method: `PUT`
+* Endpoint: `/api/v1/masters/{id}`
+* Request Body: ті самі поля, що й при створенні.
+* Response Status: `200 OK`
+* Response Body: оновлений майстер.
+
+#### Видалення майстра
+
+* Request Method: `DELETE`
+* Endpoint: `/api/v1/masters/{id}`
+* Response Status: `200 OK`
+* Response Body: видалений майстер.
+* Обмеження: майстра не можна видалити, якщо за ним закріплені ескізи (див. розділ нижче).
+
+## Обмеження предметної області та помилки
+
+| Ситуація | Статус | Обґрунтування |
+|---|---|---|
+| Невалідні дані (порожнє поле, ціна ≤ 0, некоректний URL, неіснуючий `master`) | `400 Bad Request` | Запит коректний за формою, але дані не проходять валідацію |
+| Ескіз або майстер із таким id не існує | `404 Not Found` | Запитаного ресурсу не знайдено |
+| Видалення майстра, за яким закріплені ескізи | `409 Conflict` | Запит коректний, але суперечить поточному стану даних |
+
+Формат помилки однаковий для всіх ендпоінтів:
+
+```json
+{
+  "error": {
+    "code": "conflict",
+    "message": "Неможливо видалити майстра «Олена Корж», оскільки за ним закріплено ескізів: 3. Спершу видаліть ці ескізи або змініть їхнього майстра."
+  }
+}
+```
+
+Для помилок валідації (`400`) додатково повертається `details` з помилками по полях:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Невалідні дані. Деталі в полі details.",
+    "details": {
+      "price": ["Ціна має бути більшою за 0."]
+    }
+  }
+}
+```
+
+## CORS
+
+Для роботи фронтенду, запущеного на іншому порту, на бекенді налаштовано CORS через `django-cors-headers`. Дозволені лише конкретні адреси (`http://127.0.0.1:5500` та `http://localhost:5500`), вони вказані в `CORS_ALLOWED_ORIGINS` у файлі `config/settings.py`.
