@@ -234,3 +234,24 @@ python manage.py runserver
 ## CORS
 
 Для роботи фронтенду, запущеного на іншому порту, на бекенді налаштовано CORS через `django-cors-headers`. Дозволені лише конкретні адреси (`http://127.0.0.1:5500` та `http://localhost:5500`), вони вказані в `CORS_ALLOWED_ORIGINS` у файлі `config/settings.py`.
+
+## Змінні середовища (.env)
+
+Скопіюйте `.env.example` у `.env` та заповніть значення:
+* `SECRET_KEY` -- секретний ключ Django
+* `DEBUG` -- режим налагодження (`True` / `False`)
+* `ALLOWED_HOSTS` -- дозволені хости через кому
+* `CORS_ALLOWED_ORIGINS` -- дозволені адреси фронтенду через кому
+
+## Документація API
+
+* **Swagger UI:** http://127.0.0.1:8000/api/v1/docs/
+* **OpenAPI-схема:** http://127.0.0.1:8000/api/v1/schema/
+
+## Тести та покриття
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+coverage run -m pytest
+coverage report
